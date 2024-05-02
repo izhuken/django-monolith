@@ -1,13 +1,13 @@
-import os
-import socket
-import environ
-
+from os import getenv as env
+from os import path
 from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Environ settings
 # https://django-environ.readthedocs.io/en/latest/
-env = environ.Env()
-environ.Env.read_env('.env')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,19 +21,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = bool(int(env("DEBUG")))
 
 ALLOWED_HOSTS = [
     '0.0.0.0', 
-    '127.0.0.1'
+    '127.0.0.1',
+    'localhost',
+    'kitten.labofdev.ru',
 ]
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'whitenoise',
-
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -43,21 +43,16 @@ INSTALLED_APPS = [
     'django.contrib.sites',
 
     # second part
-    'allauth', 
-    'allauth.account',
-    'allauth.socialaccount',
+    'whitenoise',
     'drf_yasg',
     'corsheaders',
-    'crispy_forms',
     'rest_framework',
-    'debug_toolbar',
 
     # third part
-    'authsystem.apps.AuthsystemConfig',
+    'app'
 ]
 
 MIDDLEWARE = [
-    # 'django.middleware.cache.UpdateCacheMiddleware',# - cache middleware
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware', # whitenoise
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -67,8 +62,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
-    # 'django.middleware.cache.FetchFromCacheMiddleware',# - cache middleware
 ]
 
 ROOT_URLCONF = 'server.urls'
@@ -77,7 +70,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            os.path.join(BASE_DIR, 'templates'),
+            path.join(BASE_DIR, 'templates'),
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -97,23 +90,25 @@ WSGI_APPLICATION = 'server.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': env('DB_NAME'),
-#         'USER': env('DB_USER'),
-#         'PASSWORD': env('DB_PASSWORD'),
-#         'HOST': env('DB_HOST'),
-#         'PORT': int( env('DB_PORT') ),
-#     }
-# }
+if DEBUG:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': env('DB_NAME'),
+            'USER': env('DB_USER'),
+            'PASSWORD': env('DB_PASSWORD'),
+            'HOST': env('DB_HOST'),
+            'PORT': int( env('DB_PORT') ),
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
@@ -150,14 +145,15 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
 
 STATIC_URL = "/static/"
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = path.join(BASE_DIR, 'static')
 STATICFILES_DIRS = [
+    path.join(STATIC_ROOT, 'app'),
 ]
 
 # Media
 # https://docs.djangoproject.com/en/4.1/topics/files/
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media') 
+MEDIA_ROOT = path.join(BASE_DIR, 'media') 
 MEDIA_URL = '/media/'
 
 # Default primary key field type
@@ -165,71 +161,10 @@ MEDIA_URL = '/media/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
-# Email settings
-# https://docs.djangoproject.com/en/4.1/topics/email/
-
-DEFAULT_FROM_EMAIL = env('EMAIL')
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.mail.ru'
-EMAIL_HOST_USER = env('EMAIL')
-EMAIL_HOST_PASSWORD = env('EMAIL_PASSWORD')
-EMAIL_PORT = int(env('EMAIL_PORT'))
-EMAIL_USE_TLS = False
-EMAIL_USE_SSL = True
-
-# Celery options
-# https://docs.celeryq.dev/en/stable/
-
-# REDIS_HOST = 'redis'
-REDIS_HOST = 'redis'
-REDIS_PORT = str(6379)
-
-CELERY_BROKER_URL = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
-CELERY_TRANSPORT_OPTIONS = {'visibilitytimeout': 3600}
-CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
-CELERY_ACCEPT_CONTENT = ['application/json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-
 # All-Auth configutation
 # https://django-allauth.readthedocs.io/en/latest/configuration.html
 SITE_ID = 1
 
-ACCOUNT_FORMS = {
-    "login": "allauth.account.forms.LoginForm",
-    "add_email": "allauth.account.forms.AddEmailForm",
-    "change_password": "allauth.account.forms.ChangePasswordForm",
-    "set_password": "allauth.account.forms.SetPasswordForm",
-    "reset_password": "allauth.account.forms.ResetPasswordForm",
-    "reset_password_from_key": "allauth.account.forms.ResetPasswordKeyForm",
-    "disconnect": "allauth.socialaccount.forms.DisconnectForm",
-    "signup": "authsystem.forms.CustomSignupForm",
-}
-
-LOGIN_REDIRECT_URL = 'home'
-LOGOUT_REDIRECT_URL = 'account_login'
-ACCOUNT_LOGOUT_REDIRECT = 'home'
-ACCOUNT_MAX_EMAIL_ADDRESSES = 1
-ACCOUNT_EMAIL_VERIFICATION = 'none'
-
-AUTHENTICATION_BACKENDS = (
-'django.contrib.auth.backends.ModelBackend',
-'allauth.account.auth_backends.AuthenticationBackend',
-)
-
-AUTH_USER_MODEL = 'authsystem.User' 
-
-
-ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
-ACCOUNT_EMAIL_CONFIRMATION_HMAC = False
-ACCOUNT_SESSION_REMEMBER = True
-ACCOUNT_EMAIL_REQUIRED = True
-
-# Crispy forms settings
-# https://django-crispy-forms.readthedocs.io/en/latest/
-
-CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 # Cors Headers Settings
 # https://github.com/adamchainz/django-cors-headers
@@ -240,12 +175,6 @@ CORS_ALLOW_ALL_ORIGINS = True
 # https://github.com/evansd/whitenoise/
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-# Debug Toolbar Settings
-# https://django-debug-toolbar.readthedocs.io/en/latest/index.html
-
-hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
-INTERNAL_IPS = [ip[:-1] + "1" for ip in ips]
 
 ### DAJNGO SECURITY
 # https://docs.djangoproject.com/en/4.1/topics/security/
