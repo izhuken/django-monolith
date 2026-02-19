@@ -1,145 +1,131 @@
-import os
-import socket
-import environ
-
+from os import getenv, path
 from pathlib import Path
 
-# Environ settings
-# https://django-environ.readthedocs.io/en/latest/
-env = environ.Env()
-environ.Env.read_env('.env')
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
+# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# SECRET_KEY = 'django-insecure-vakb02ds@g(izf(x-3pf@_+_98ypnequy*9h3_7!37@tx+9w6(' #os.getenv('SECRET_KEY')
-SECRET_KEY = env('SECRET_KEY')
+SECRET_KEY = getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = bool(int(getenv("DEBUG")))
+
+APP_MODE = getenv("APP_MODE")
 
 ALLOWED_HOSTS = [
-    '0.0.0.0', 
-    '127.0.0.1'
-]
+    "127.0.0.1",
+    "0.0.0.0",
+] + getenv("DOMAIN", "localhost").split(",")
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'whitenoise',
-
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'django.contrib.sites',
-
-    # second part
-    'allauth', 
-    'allauth.account',
-    'allauth.socialaccount',
-    'drf_yasg',
-    'corsheaders',
-    'crispy_forms',
-    'rest_framework',
-    'debug_toolbar',
-
-    # third part
-    'authsystem.apps.AuthsystemConfig',
+    # 1st party apps
+    "ckeditor",
+    # 2d party apps
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    # 3d party apps
+    "automobile.apps.AutomobileConfig",
+    "info.apps.InfoConfig",
+    "products.apps.ProductsConfig",
+    "vacancies.apps.VacanciesConfig",
+    # API
+    "api.apps.ApiConfig",
 ]
 
 MIDDLEWARE = [
-    # 'django.middleware.cache.UpdateCacheMiddleware',# - cache middleware
-    'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', # whitenoise
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',  # cors headers
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
-    # 'django.middleware.cache.FetchFromCacheMiddleware',# - cache middleware
+    # "settings.middlewares.UnicodeDomainMiddleware",
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'server.urls'
+ROOT_URLCONF = "settings.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [
-            os.path.join(BASE_DIR, 'templates'),
-        ],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [path.join(BASE_DIR, "templates")],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'server.wsgi.application'
+WSGI_APPLICATION = "settings.wsgi.application"
 
 
 # Database
-# https://docs.djangoproject.com/en/4.0/ref/settings/#databases
+# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if APP_MODE == "production":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": getenv("POSTGRES_DB"),
+            "USER": getenv("POSTGRES_USER"),
+            "PASSWORD": getenv("POSTGRES_PASSWORD"),
+            "HOST": getenv("POSTGRES_HOST"),
+            "PORT": int(getenv("POSTGRES_PORT")),
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': env('DB_NAME'),
-#         'USER': env('DB_USER'),
-#         'PASSWORD': env('DB_PASSWORD'),
-#         'HOST': env('DB_HOST'),
-#         'PORT': int( env('DB_PORT') ),
-#     }
-# }
 
 # Password validation
-# https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
+# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
 
 # Internationalization
-# https://docs.djangoproject.com/en/4.0/topics/i18n/
+# https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "ru-ru"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "Europe/Moscow"
 
 USE_I18N = True
 
@@ -147,136 +133,78 @@ USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.1/howto/static-files/
+# https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = "/static/"
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-STATICFILES_DIRS = [
-]
+STATIC_URL = "static/"
 
-# Media
-# https://docs.djangoproject.com/en/4.1/topics/files/
+if DEBUG:
+    STATICFILES_DIRS = [path.join(BASE_DIR, "static")]
+else:
+    STATIC_ROOT = path.join(BASE_DIR, "static")
+    STATICFILES_DIRS = []
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media') 
-MEDIA_URL = '/media/'
 
 # Default primary key field type
-# https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
+# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Media
+# https://docs.djangoproject.com/en/5.2/topics/files/
 
-# Email settings
-# https://docs.djangoproject.com/en/4.1/topics/email/
-
-DEFAULT_FROM_EMAIL = env('EMAIL')
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.mail.ru'
-EMAIL_HOST_USER = env('EMAIL')
-EMAIL_HOST_PASSWORD = env('EMAIL_PASSWORD')
-EMAIL_PORT = int(env('EMAIL_PORT'))
-EMAIL_USE_TLS = False
-EMAIL_USE_SSL = True
-
-# Celery options
-# https://docs.celeryq.dev/en/stable/
-
-# REDIS_HOST = 'redis'
-REDIS_HOST = 'redis'
-REDIS_PORT = str(6379)
-
-CELERY_BROKER_URL = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
-CELERY_TRANSPORT_OPTIONS = {'visibilitytimeout': 3600}
-CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:{REDIS_PORT}/0'
-CELERY_ACCEPT_CONTENT = ['application/json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-
-# All-Auth configutation
-# https://django-allauth.readthedocs.io/en/latest/configuration.html
-SITE_ID = 1
-
-ACCOUNT_FORMS = {
-    "login": "allauth.account.forms.LoginForm",
-    "add_email": "allauth.account.forms.AddEmailForm",
-    "change_password": "allauth.account.forms.ChangePasswordForm",
-    "set_password": "allauth.account.forms.SetPasswordForm",
-    "reset_password": "allauth.account.forms.ResetPasswordForm",
-    "reset_password_from_key": "allauth.account.forms.ResetPasswordKeyForm",
-    "disconnect": "allauth.socialaccount.forms.DisconnectForm",
-    "signup": "authsystem.forms.CustomSignupForm",
-}
-
-LOGIN_REDIRECT_URL = 'home'
-LOGOUT_REDIRECT_URL = 'account_login'
-ACCOUNT_LOGOUT_REDIRECT = 'home'
-ACCOUNT_MAX_EMAIL_ADDRESSES = 1
-ACCOUNT_EMAIL_VERIFICATION = 'none'
-
-AUTHENTICATION_BACKENDS = (
-'django.contrib.auth.backends.ModelBackend',
-'allauth.account.auth_backends.AuthenticationBackend',
-)
-
-AUTH_USER_MODEL = 'authsystem.User' 
-
-
-ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
-ACCOUNT_EMAIL_CONFIRMATION_HMAC = False
-ACCOUNT_SESSION_REMEMBER = True
-ACCOUNT_EMAIL_REQUIRED = True
-
-# Crispy forms settings
-# https://django-crispy-forms.readthedocs.io/en/latest/
-
-CRISPY_TEMPLATE_PACK = 'bootstrap4'
-
-# Cors Headers Settings
-# https://github.com/adamchainz/django-cors-headers
-
-CORS_ALLOW_ALL_ORIGINS = True 
-
-# WhiteNoise settings
-# https://github.com/evansd/whitenoise/
-
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-# Debug Toolbar Settings
-# https://django-debug-toolbar.readthedocs.io/en/latest/index.html
-
-hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
-INTERNAL_IPS = [ip[:-1] + "1" for ip in ips]
+MEDIA_ROOT = path.join(BASE_DIR, "media")
+MEDIA_URL = "/media/"
 
 ### DAJNGO SECURITY
-# https://docs.djangoproject.com/en/4.1/topics/security/
+# https://docs.djangoproject.com/en/5.2/topics/security/
 
 # XFrame options
-# https://docs.djangoproject.com/en/4.1/ref/clickjacking/
+# https://docs.djangoproject.com/en/5.2/ref/clickjacking/
 
-# X_FRAME_OPTIONS = 'SAMEORIGIN'
-
-# CSRF settings
-# https://docs.djangoproject.com/en/4.1/ref/csrf/
- 
-CSRF_COOKIE_SECURE = False
+X_FRAME_OPTIONS = "SAMEORIGIN"
 
 # XSS settings
-# https://docs.djangoproject.com/en/4.1/topics/security/#cross-site-scripting-xss-protection
+# https://docs.djangoproject.com/en/5.2/topics/security/#cross-site-scripting-xss-protection
 
-SECURE_BROWSER_XSS_FILTER = False
+SECURE_BROWSER_XSS_FILTER = True
 
 # SSL& HSTS settings
-# https://docs.djangoproject.com/en/4.1/topics/security/#ssl-https
+# https://docs.djangoproject.com/en/5.2/topics/security/#ssl-https
 
-SECURE_SSL_REDIRECT = False
-SECURE_HSTS_INCLUDE_SUBDOMAINS = False
-SECURE_HSTS_PRELOAD = False
+SECURE_SSL_REDIRECT = APP_MODE == "production"
+SECURE_HSTS_INCLUDE_SUBDOMAINS = APP_MODE == "production"
+SECURE_HSTS_PRELOAD = APP_MODE == "production"
 
 # Session settings
-# https://docs.djangoproject.com/en/4.1/topics/http/sessions/#settings
+# https://docs.djangoproject.com/en/5.2/topics/http/sessions/#settings
 
-SESSION_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = APP_MODE == "production"
 
 # Secure content settings
 
-SECURE_CONTENT_TYPE_NOSNIFF = False
+SECURE_CONTENT_TYPE_NOSNIFF = APP_MODE == "production"
+
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "DEBUG",
+    },
+}
+
+# Cache settings
+
+if DEBUG:
+    CACHE_LIFETIME = 60
+else:
+    CACHE_LIFETIME = 3600

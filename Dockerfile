@@ -1,26 +1,53 @@
-FROM python:3.10-alpine as builder
+# GET UV stage
+FROM python:3.12-alpine AS get-uv
+
+RUN apk add curl
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Build stage
+FROM python:3.12-alpine AS build-deps
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+RUN apk add gcc python3-dev musl-dev postgresql-dev
 
-RUN apk add --no-cache python3 postgresql-libs libxml2-dev libxslt-dev 
-RUN apk add --no-cache --virtual .build-deps gcc python3-dev musl-dev postgresql-dev
+COPY --from=get-uv /root/.local/bin/uv /bin/uv
 
-COPY ./ .
+COPY ./pyproject.toml /app/pyproject.toml
+COPY ./.python-version /app/.python-version
+COPY ./uv.lock /app/uv.lock
 
+RUN uv export \
+    --format requirements-txt \
+    --output-file /app/requirements.txt
+
+
+RUN pip install --no-cache-dir wheel
 RUN pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements.txt
 
-FROM python:3.10-alpine
+# Runtime
+FROM python:3.12-alpine AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
 RUN apk add libpq
 
-COPY --from=builder /app/wheels /wheels
-COPY --from=builder /app/requirements.txt .
+RUN --mount=type=bind,from=build-deps,source=/app/wheels,target=/wheels pip install \
+    --no-cache-dir \
+    --no-index \
+    --no-cache \ 
+    --no-deps \
+    --find-links=/wheels /wheels/*
 
-RUN pip install --no-cache --upgrade pip
-RUN pip install --no-cache /wheels/*
+COPY ./ ./
 
-COPY ./ .
+RUN mv /app/deploy/entrypoint.sh /app/entrypoint.sh \
+    && chmod +x /app/entrypoint.sh
+
+ENTRYPOINT [ "/app/entrypoint.sh" ]
